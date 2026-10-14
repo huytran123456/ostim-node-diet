@@ -38,19 +38,26 @@ if ($Rollback) {
     Say "Restored the original file from $backup"
     exit 0
 }
+$wrongFile = "This does not look like the 0_Master.hkx built by Pandora. Nothing was changed. Pick <output>\meshes\actors\character\behaviors\0_Master.hkx"
+# any unexpected error (damaged or unrelated file) ends here; the target file is only replaced at the very end
+trap { Say "Could not process this file: $($_.Exception.Message)"; Say $wrongFile; exit 1 }
+
 $b = [IO.File]::ReadAllBytes($Path)
 function I32([int]$o) { [BitConverter]::ToInt32($b, $o) }
-function CStr([int]$o) { $e = $o; while ($b[$e] -ne 0) { $e++ }; [Text.Encoding]::ASCII.GetString($b, $o, $e - $o) }
+function CStr([int]$o) { $e = $o; while ($e -lt $b.Length -and $b[$e] -ne 0) { $e++ }; [Text.Encoding]::ASCII.GetString($b, $o, $e - $o) }
 
 # ---------- parse packfile ----------
-if ((I32 0) -ne 0x57E0E057 -or $b[0x10] -ne 8) { Say "Not a 64-bit Havok packfile: $Path"; exit 1 }
+if ($b.Length -lt 0x100 -or (I32 0) -ne 0x57E0E057 -or $b[0x10] -ne 8) { Say "Not a 64-bit Havok packfile: $Path"; Say $wrongFile; exit 1 }
 $nsec = I32 0x14
+if ($nsec -lt 1 -or $nsec -gt 16 -or 0x40 + $nsec * 0x30 -gt $b.Length) { Say "Damaged Havok header: $Path"; Say $wrongFile; exit 1 }
 $secs = @{}
 for ($i = 0; $i -lt $nsec; $i++) {
     $h = 0x40 + $i * 0x30
     $secs[(CStr $h)] = [pscustomobject]@{ Index = $i; Start = (I32 ($h + 20)); Local = (I32 ($h + 24)); Global = (I32 ($h + 28)); Virtual = (I32 ($h + 32)); Exports = (I32 ($h + 36)) }
 }
-$cn = $secs['__classnames__']; $ds = $secs['__data__']; $D = $ds.Start
+$cn = $secs['__classnames__']; $ds = $secs['__data__']
+if (-not $cn -or -not $ds -or $ds.Start + $ds.Exports -gt $b.Length -or $cn.Start -ge $b.Length) { Say "Damaged Havok sections: $Path"; Say $wrongFile; exit 1 }
+$D = $ds.Start
 $local = New-Object 'System.Collections.Generic.Dictionary[int,int]'
 for ($o = $D + $ds.Local; $o -lt $D + $ds.Global; $o += 8) { $s = I32 $o; if ($s -ge 0) { $local[$s] = I32 ($o + 4) } }
 $gDst = New-Object 'System.Collections.Generic.Dictionary[int,int]'   # src -> dst
@@ -88,9 +95,11 @@ function CountReachable($dst) {
 
 # ---------- find bAnimationDriven variable index ----------
 $sd = $offArr | Where-Object { $cls[$_] -eq 'hkbBehaviorGraphStringData' } | Select-Object -First 1
+if ($null -eq $sd -or -not $local.ContainsKey($sd + 48)) { Say "Not a behavior graph (animation or other Havok file?): $Path"; Say $wrongFile; exit 1 }
 $vb = $local[$sd + 48]; $vn = I32 ($D + $sd + 56); $animDriven = -1
-for ($i = 0; $i -lt $vn; $i++) { if ((CStr ($D + $local[$vb + 8 * $i])) -eq 'bAnimationDriven') { $animDriven = $i; break } }
-if ($animDriven -lt 0) { Say "bAnimationDriven variable not found - aborting"; exit 1 }
+if ($vn -lt 0 -or $vn -gt 100000) { Say "Damaged behavior variable table: $Path"; Say $wrongFile; exit 1 }
+for ($i = 0; $i -lt $vn; $i++) { if ($local.ContainsKey($vb + 8 * $i) -and (CStr ($D + $local[$vb + 8 * $i])) -eq 'bAnimationDriven') { $animDriven = $i; break } }
+if ($animDriven -lt 0) { Say "No bAnimationDriven variable - this is not the character master behavior: $Path"; Say $wrongFile; exit 1 }
 
 # reference counts of every target, and owner state(s) of every generator
 $refs = New-Object 'System.Collections.Generic.Dictionary[int,int]'
