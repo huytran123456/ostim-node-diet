@@ -68,16 +68,21 @@ REQUIREMENTS
 HOW TO USE
 ----------
 1. Run Pandora as usual.
-2. Double-click "Run Node Diet.bat" and select the 0_Master.hkx Pandora just built
-   (<Pandora output>\meshes\actors\character\behaviors\0_Master.hkx),
-   or drag that 0_Master.hkx onto "Run Node Diet.bat".
+2. Double-click "Run Node Diet.bat". A file picker opens - select the 0_Master.hkx
+   Pandora just built. It is in meshes\actors\character\behaviors\ inside the folder
+   Pandora outputs to, which depends on your setup:
+     - MO2: the mod folder you set as Pandora's output (e.g. MO2\mods\Pandora Output),
+       or MO2\overwrite if you didn't set one
+     - Vortex / manual: Skyrim Special Edition\Data
+   Not sure? Check the output path in Pandora's settings, or search for 0_Master.hkx
+   and pick the newest one.
 3. Wait until it prints "Done." (about 1-3 minutes, it is slow PowerShell).
+
+The file is edited WHERE IT IS - do not move or copy it anywhere. The backup
+(0_Master.hkx.original) is created right next to it.
 
 IMPORTANT: every time you run Pandora again, it rebuilds the full file - run the tool again
 afterwards. If the file is already processed, the tool just says "Nothing to do".
-
-MO2 users: select the real file inside your Pandora output mod folder
-(e.g. MO2\mods\Pandora Output\meshes\actors\character\behaviors\0_Master.hkx).
 
 
 ROLLBACK / UNINSTALL
