@@ -16,7 +16,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $logFile = Join-Path $PSScriptRoot 'OStimNodeDiet.log'
-function Say($m) { Write-Host $m; Add-Content -Path $logFile -Value ("[{0:yyyy-MM-dd HH:mm:ss}] {1}" -f (Get-Date), $m) }
+# .NET call instead of Add-Content: no wildcard parsing of [ ] in folder names, and a log failure never aborts the run
+function Say($m) { Write-Host $m; try { [IO.File]::AppendAllText($logFile, ("[{0:yyyy-MM-dd HH:mm:ss}] {1}`r`n" -f (Get-Date), $m)) } catch { } }
 
 if (-not $Path) {
     Add-Type -AssemblyName System.Windows.Forms

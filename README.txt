@@ -8,6 +8,17 @@ Skyrim engine / Havok expert. Treat it as experimental: read the script if you l
 (it is plain PowerShell), keep the automatic backup, and report problems.
 
 
+!! READ BEFORE USING !!
+Only run this tool if you're actually getting the OStim crash described below
+(hkbBehaviorGraph::GlobalTransitionData / mov rax,[rdx+0x10] in your crash log).
+If your game is running fine, don't use it. Reshuffling the nodes changes which state
+machines share an ID, so if your setup is still over the limit, it can move the collision
+onto an OStim node and cause the exact crash it's meant to fix.
+The 65,536 limit counts all behavior files, not just 0_Master. Big SexLab / SLAL /
+Devious Devices setups add a lot of FNIS behavior nodes this tool can't shrink.
+If you crash after using it, roll back (run Pandora again or use Rollback.bat).
+
+
 THE CRASH THIS FIXES
 --------------------
 Random CTD when an OStim scene starts or switches animation, usually only with many
